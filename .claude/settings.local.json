@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('nativewind:', p.dependencies.nativewind, p.devDependencies?.nativewind\\); console.log\\('tailwindcss:', p.dependencies.tailwindcss, p.devDependencies?.tailwindcss\\);\")",
+      "Bash(npm show *)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const v=JSON.parse\\(d\\); console.log\\(v.filter\\(x=>x.startsWith\\('5'\\)||x.includes\\('alpha'\\)||x.includes\\('beta'\\)||x.includes\\('next'\\)||x.includes\\('rc'\\)\\).join\\('\\\\n'\\)\\);\")",
+      "Bash(node -e \"require\\('nativewind/metro'\\); console.log\\('nativewind/metro OK'\\)\")",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('./node_modules/nativewind/package.json'\\).exports\\).filter\\(k=>k.includes\\('metro'\\)||k.includes\\('theme'\\)||k.includes\\('type'\\)\\)\\)\")",
+      "Bash(git add *)"
+    ]
+  }
+}
