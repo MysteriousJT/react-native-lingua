@@ -1,21 +1,42 @@
-import { Text, View, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import { useAuth, useUser } from "@clerk/expo";
+import { Redirect } from "expo-router";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
-  const router = useRouter();
+  const { isSignedIn, isLoaded, signOut } = useAuth();
+  const { user } = useUser();
+
+  if (!isLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#6c4ef5" />
+      </View>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href="/onboarding" />;
+  }
 
   return (
-    <View className="flex-1 justify-center items-center gap-4">
-      <Text className="h2 text-center color-lingua-purple">Lingua</Text>
-      <TouchableOpacity
-        className="btn btn-primary"
-        onPress={() => router.push("/onboarding")}
-        activeOpacity={0.85}
-      >
-        <Text className="body-md font-poppins-semibold text-white">
-          View Onboarding
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}>
+        <Text className="h1 color-ink text-center">Welcome!</Text>
+        <Text className="body-md color-muted mt-2 text-center">
+          {user?.primaryEmailAddress?.emailAddress}
         </Text>
-      </TouchableOpacity>
-    </View>
+        <Text className="body-sm color-muted mt-6 text-center">
+          Home screen coming soon.
+        </Text>
+        <TouchableOpacity
+          className="btn btn-primary mt-8"
+          onPress={() => signOut()}
+          activeOpacity={0.85}
+        >
+          <Text className="body-lg font-poppins-semibold text-white">Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }

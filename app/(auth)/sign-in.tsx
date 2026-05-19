@@ -1,38 +1,97 @@
 import VerificationModal from "@/components/VerificationModal";
 import { images } from "@/constants/images";
+import { useSignIn, useSSO } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function SignIn() {
   const router = useRouter();
+  const { signIn, fetchStatus } = useSignIn();
+  const { startSSOFlow } = useSSO();
+
   const [email, setEmail] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const isLoading = fetchStatus === "fetching";
 
   async function handleSignIn() {
     if (!email.trim()) return;
-    setIsLoading(true);
+    setError("");
+
     try {
-      // Clerk integration not installed in this repo; keep existing modal flow.
-      // If Clerk is added, call signIn.create({ identifier: email, strategy: 'email_link' }) here.
+      // Sends a 6-digit OTP to the user's email
+      // Requires "Email verification code" enabled as a sign-in method in Clerk Dashboard
+      const { error: sendError } = await signIn.emailCode.sendCode({
+        emailAddress: email,
+      });
+
+      if (sendError) {
+        setError(sendError.message);
+        return;
+      }
+
       setModalVisible(true);
-    } catch (err) {
-      console.error("Sign-in error:", err);
-    } finally {
-      setIsLoading(false);
+    } catch (err: any) {
+      setError(err.errors?.[0]?.message || "Sign in failed. Please try again.");
+    }
+  }
+
+  async function handleVerify(code: string) {
+    const { error: verifyError } = await signIn.emailCode.verifyCode({ code });
+
+    if (verifyError) {
+      throw new Error(verifyError.message);
+    }
+
+    if (signIn.status === "complete") {
+      const { error: finalizeError } = await signIn.finalize();
+      if (finalizeError) throw new Error(finalizeError.message);
+      router.replace("/");
+    } else {
+      throw new Error("Verification incomplete. Please try again.");
+    }
+  }
+
+  async function handleResend() {
+    try {
+      await signIn.emailCode.sendCode({ emailAddress: email });
+    } catch (err: any) {
+      console.error("Resend error:", err);
+    }
+  }
+
+  async function handleSocialAuth(
+    strategy: "oauth_google" | "oauth_apple" | "oauth_facebook"
+  ) {
+    try {
+      const result = await startSSOFlow({
+        strategy,
+        redirectUrl: Linking.createURL("/"),
+      });
+      if (result.createdSessionId && result.setActive) {
+        await result.setActive({ session: result.createdSessionId });
+        router.replace("/");
+      }
+    } catch (err: any) {
+      console.error("Social auth error:", err);
     }
   }
 
@@ -86,6 +145,13 @@ export default function SignIn() {
             />
           </View>
 
+          {/* Error message */}
+          {error ? (
+            <Text style={{ color: "#dc2626" }} className="body-sm mt-2">
+              {error}
+            </Text>
+          ) : null}
+
           {/* Sign In button */}
           <TouchableOpacity
             className="btn btn-primary mt-6"
@@ -93,7 +159,9 @@ export default function SignIn() {
             activeOpacity={0.85}
             disabled={isLoading}
           >
-            <Text className="body-lg font-poppins-semibold text-white">{isLoading ? "Sending..." : "Sign In"}</Text>
+            <Text className="body-lg font-poppins-semibold text-white">
+              {isLoading ? "Sending code..." : "Sign In"}
+            </Text>
           </TouchableOpacity>
 
           {/* Divider */}
@@ -107,14 +175,17 @@ export default function SignIn() {
           <SocialButton
             icon={<Ionicons name="logo-google" size={22} color="#EA4335" />}
             label="Continue with Google"
+            onPress={() => handleSocialAuth("oauth_google")}
           />
           <SocialButton
             icon={<Ionicons name="logo-facebook" size={22} color="#1877F2" />}
             label="Continue with Facebook"
+            onPress={() => handleSocialAuth("oauth_facebook")}
           />
           <SocialButton
             icon={<Ionicons name="logo-apple" size={22} color="#000000" />}
             label="Continue with Apple"
+            onPress={() => handleSocialAuth("oauth_apple")}
           />
 
           {/* Footer */}
@@ -125,7 +196,9 @@ export default function SignIn() {
           >
             <Text className="body-md color-muted">
               {"Don't have an account? "}
-              <Text className="font-poppins-semibold color-lingua-purple">Sign Up</Text>
+              <Text className="font-poppins-semibold color-lingua-purple">
+                Sign Up
+              </Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -135,14 +208,28 @@ export default function SignIn() {
         visible={modalVisible}
         email={email}
         onClose={() => setModalVisible(false)}
+        onVerify={handleVerify}
+        onResend={handleResend}
       />
     </SafeAreaView>
   );
 }
 
-function SocialButton({ icon, label }: { icon: React.ReactNode; label: string }) {
+function SocialButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+}) {
   return (
-    <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={styles.socialBtn}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
       <View style={styles.socialIcon}>{icon}</View>
       <Text className="body-md font-poppins-medium color-ink flex-1 text-center">
         {label}

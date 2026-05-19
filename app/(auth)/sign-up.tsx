@@ -1,41 +1,113 @@
 import VerificationModal from "@/components/VerificationModal";
 import { images } from "@/constants/images";
+import { useSignUp, useSSO } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function SignUp() {
   const router = useRouter();
+  const { signUp, fetchStatus } = useSignUp();
+  const { startSSOFlow } = useSSO();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [error, setError] = useState("");
 
-  function handleSignUp() {
+  const isLoading = fetchStatus === "fetching";
+
+  async function handleSignUp() {
     setError("");
+
     if (!email.trim()) return;
-    // Password must be at least 8 chars and contain a letter and a number
+
     const pwRule = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
     if (!pwRule.test(password)) {
-      setError("Password must be 8+ characters and include a letter and a number.");
+      setError("Password must be 8+ characters with a letter and a number.");
       return;
     }
 
-    // Clerk sign-up integration is not present in this repo. Keep existing modal flow.
-    setModalVisible(true);
+    try {
+      const { error: createError } = await signUp.password({
+        emailAddress: email,
+        password,
+      });
+
+      if (createError) {
+        setError(createError.message);
+        return;
+      }
+
+      const { error: sendError } = await signUp.verifications.sendEmailCode();
+      if (sendError) {
+        setError(sendError.message);
+        return;
+      }
+
+      setModalVisible(true);
+    } catch (err: any) {
+      setError(err.errors?.[0]?.message || "Sign up failed. Please try again.");
+    }
+  }
+
+  async function handleVerify(code: string) {
+    const { error: verifyError } =
+      await signUp.verifications.verifyEmailCode({ code });
+
+    if (verifyError) {
+      throw new Error(verifyError.message);
+    }
+
+    if (signUp.status === "complete") {
+      const { error: finalizeError } = await signUp.finalize();
+      if (finalizeError) throw new Error(finalizeError.message);
+      router.replace("/");
+    } else {
+      throw new Error("Verification incomplete. Please try again.");
+    }
+  }
+
+  async function handleResend() {
+    try {
+      await signUp.verifications.sendEmailCode();
+    } catch (err: any) {
+      console.error("Resend error:", err);
+    }
+  }
+
+  async function handleSocialAuth(
+    strategy: "oauth_google" | "oauth_apple" | "oauth_facebook"
+  ) {
+    try {
+      const result = await startSSOFlow({
+        strategy,
+        redirectUrl: Linking.createURL("/"),
+      });
+      if (result.createdSessionId && result.setActive) {
+        await result.setActive({ session: result.createdSessionId });
+        router.replace("/");
+      }
+    } catch (err: any) {
+      console.error("Social auth error:", err);
+    }
   }
 
   return (
@@ -114,18 +186,23 @@ export default function SignUp() {
             </View>
           </View>
 
-          {/* Sign Up button */}
+          {/* Error message */}
           {error ? (
             <Text style={{ color: "#dc2626" }} className="body-sm mt-2">
               {error}
             </Text>
           ) : null}
+
+          {/* Sign Up button */}
           <TouchableOpacity
             className="btn btn-primary mt-6"
             onPress={handleSignUp}
             activeOpacity={0.85}
+            disabled={isLoading}
           >
-            <Text className="body-lg font-poppins-semibold text-white">Sign Up</Text>
+            <Text className="body-lg font-poppins-semibold text-white">
+              {isLoading ? "Creating account..." : "Sign Up"}
+            </Text>
           </TouchableOpacity>
 
           {/* Divider */}
@@ -139,14 +216,17 @@ export default function SignUp() {
           <SocialButton
             icon={<Ionicons name="logo-google" size={22} color="#EA4335" />}
             label="Continue with Google"
+            onPress={() => handleSocialAuth("oauth_google")}
           />
           <SocialButton
             icon={<Ionicons name="logo-facebook" size={22} color="#1877F2" />}
             label="Continue with Facebook"
+            onPress={() => handleSocialAuth("oauth_facebook")}
           />
           <SocialButton
             icon={<Ionicons name="logo-apple" size={22} color="#000000" />}
             label="Continue with Apple"
+            onPress={() => handleSocialAuth("oauth_apple")}
           />
 
           {/* Footer */}
@@ -157,7 +237,9 @@ export default function SignUp() {
           >
             <Text className="body-md color-muted">
               Already have an account?{" "}
-              <Text className="font-poppins-semibold color-lingua-purple">Log in</Text>
+              <Text className="font-poppins-semibold color-lingua-purple">
+                Log in
+              </Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -167,14 +249,28 @@ export default function SignUp() {
         visible={modalVisible}
         email={email}
         onClose={() => setModalVisible(false)}
+        onVerify={handleVerify}
+        onResend={handleResend}
       />
     </SafeAreaView>
   );
 }
 
-function SocialButton({ icon, label }: { icon: React.ReactNode; label: string }) {
+function SocialButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+}) {
   return (
-    <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={styles.socialBtn}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
       <View style={styles.socialIcon}>{icon}</View>
       <Text className="body-md font-poppins-medium color-ink flex-1 text-center">
         {label}
