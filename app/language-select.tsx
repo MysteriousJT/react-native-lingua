@@ -1,21 +1,23 @@
+import { images } from "@/constants/images";
+import { languages } from "@/data/languages";
+import { useLanguageStore } from "@/store/useLanguageStore";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
-  View,
+  Image,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  ScrollView,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { languages } from "@/data/languages";
-import { images } from "@/constants/images";
 
 export default function LanguageSelect() {
   const [search, setSearch] = useState("");
-  const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const selectedCode = useLanguageStore((state) => state.selectedLanguage);
+  const setSelectedLanguage = useLanguageStore((state) => state.setSelectedLanguage);
 
   const filtered = languages.filter(
     (lang) =>
@@ -65,7 +67,7 @@ export default function LanguageSelect() {
           return (
             <TouchableOpacity
               key={lang.code}
-              onPress={() => setSelectedCode(lang.code)}
+              onPress={() => setSelectedLanguage(lang.code)}
               activeOpacity={0.75}
               className="flex-row items-center mx-4 mb-2 px-4 rounded-2xl"
               style={{
@@ -106,7 +108,12 @@ export default function LanguageSelect() {
           className="btn btn-primary"
           disabled={!selectedCode}
           style={{ opacity: selectedCode ? 1 : 0.4 }}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (selectedCode) {
+              setSelectedLanguage(selectedCode);
+            }
+            router.back();
+          }}
           activeOpacity={0.85}
         >
           <Text className="body-lg font-poppins-semibold text-white">
