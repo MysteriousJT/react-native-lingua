@@ -7,7 +7,12 @@
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const v=JSON.parse\\(d\\); console.log\\(v.filter\\(x=>x.startsWith\\('5'\\)||x.includes\\('alpha'\\)||x.includes\\('beta'\\)||x.includes\\('next'\\)||x.includes\\('rc'\\)\\).join\\('\\\\n'\\)\\);\")",
       "Bash(node -e \"require\\('nativewind/metro'\\); console.log\\('nativewind/metro OK'\\)\")",
       "Bash(node -e \"console.log\\(Object.keys\\(require\\('./node_modules/nativewind/package.json'\\).exports\\).filter\\(k=>k.includes\\('metro'\\)||k.includes\\('theme'\\)||k.includes\\('type'\\)\\)\\)\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(git branch *)",
+      "Bash(git remote *)",
+      "Bash(git push *)"
     ]
   }
 }
