@@ -1,5 +1,5 @@
 import { useAuth, useUser } from "@clerk/expo";
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -31,10 +31,17 @@ export default function Index() {
         </Text>
         <TouchableOpacity
           className="btn btn-primary mt-8"
+          onPress={() => router.push("/language-select")}
+          activeOpacity={0.85}
+        >
+          <Text className="body-lg font-poppins-semibold text-white">Choose a Language</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="btn btn-secondary mt-4"
           onPress={() => signOut()}
           activeOpacity={0.85}
         >
-          <Text className="body-lg font-poppins-semibold text-white">Sign Out</Text>
+          <Text className="body-lg font-poppins-semibold" style={{ color: "#6c4ef5" }}>Sign Out</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

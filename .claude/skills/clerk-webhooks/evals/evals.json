@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "every time a user signs up on our app i need to create a row in our users table in postgres (we use prisma). the table has id, email, name, clerkId, createdAt columns. can you set up the webhook handler? we're on next.js app router",
-      "expected_output": "Creates webhook route handler at app/api/webhooks/route.ts, verifies webhook signature, handles user.created event, inserts into Prisma users table",
+      "expected_output": "Creates webhook route handler at app/api/webhooks/route.ts, verifies webhook signature, handles user.created event, inserts into Prisma users table using prisma.user.create, and returns appropriate HTTP status codes on success/failure",
       "files": [],
       "assertions": [
         "Creates route handler at app/api/webhooks/route.ts or similar path",
@@ -12,6 +12,8 @@
         "Uses verifyWebhook from @clerk/nextjs/webhooks for signature verification",
         "Handles user.created event type and extracts email, name, id from payload",
         "Inserts into database using Prisma with the correct column mapping (clerkId = evt.data.id)",
+        "Uses prisma.user.create to insert the user row with id, email, name, clerkId, createdAt",
+        "Returns 200 on success and an appropriate error status on failure",
         "Mentions that webhook route must be excluded from Clerk middleware (public route)"
       ]
     },

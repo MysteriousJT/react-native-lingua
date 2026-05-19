@@ -19,7 +19,6 @@
 ```tsx
 import { useSSO } from '@clerk/expo'
 import * as WebBrowser from 'expo-web-browser'
-import { useEffect } from 'react'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -62,7 +61,6 @@ export function SignInScreen() {
 Create `app/oauth-callback.tsx`:
 
 ```tsx
-import { useEffect } from 'react'
 import * as WebBrowser from 'expo-web-browser'
 
 WebBrowser.maybeCompleteAuthSession()
