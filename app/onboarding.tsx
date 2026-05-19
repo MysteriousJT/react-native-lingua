@@ -24,7 +24,7 @@ export default function Onboarding() {
         {/* Headline */}
         <View className="mt-5">
           <Text className="h1 color-ink">Your AI language</Text>
-          <View className="flex-row" style={{ marginTop: -6 }}>
+          <View className="flex-row -mt-1.5">
             <Text className="h1 color-lingua-purple">teacher</Text>
             <Text className="h1 color-ink">.</Text>
           </View>
@@ -71,7 +71,7 @@ export default function Onboarding() {
         {/* Get Started button */}
         <TouchableOpacity
           className="btn btn-primary flex-row items-center mb-4"
-          onPress={() => router.push("/")}
+          onPress={() => router.push("/(auth)/sign-up")}
           activeOpacity={0.85}
         >
           <View className="w-5" />
