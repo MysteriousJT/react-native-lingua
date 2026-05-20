@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LanguageSelect() {
   const [search, setSearch] = useState("");
+  const [canGoBack] = useState(() => router.canGoBack());
   const selectedCode = useLanguageStore((state) => state.selectedLanguage);
   const setSelectedLanguage = useLanguageStore((state) => state.setSelectedLanguage);
 
@@ -29,9 +30,11 @@ export default function LanguageSelect() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       {/* Header */}
       <View className="flex-row items-center px-4 pt-1 pb-2">
-        <TouchableOpacity onPress={() => router.back()} className="p-1">
-          <Ionicons name="chevron-back" size={24} color="#001132" />
-        </TouchableOpacity>
+        {canGoBack && (
+          <TouchableOpacity onPress={() => router.back()} className="p-1">
+            <Ionicons name="chevron-back" size={24} color="#001132" />
+          </TouchableOpacity>
+        )}
         <Text className="h3 flex-1 text-center">Choose a language</Text>
         {/* spacer to balance the back button */}
         <View style={{ width: 32 }} />
@@ -111,8 +114,8 @@ export default function LanguageSelect() {
           onPress={() => {
             if (selectedCode) {
               setSelectedLanguage(selectedCode);
+              router.replace("/");
             }
-            router.back();
           }}
           activeOpacity={0.85}
         >

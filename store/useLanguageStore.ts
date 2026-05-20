@@ -6,6 +6,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 interface LanguageState {
   selectedLanguage: LanguageCode | null;
   setSelectedLanguage: (language: LanguageCode) => void;
+  clearSelectedLanguage: () => void;
 }
 
 export const useLanguageStore = create<LanguageState>()(
@@ -13,6 +14,7 @@ export const useLanguageStore = create<LanguageState>()(
     (set) => ({
       selectedLanguage: null,
       setSelectedLanguage: (language) => set({ selectedLanguage: language }),
+      clearSelectedLanguage: () => set({ selectedLanguage: null }),
     }),
     {
       name: "language-store",

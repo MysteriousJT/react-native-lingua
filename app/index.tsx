@@ -1,13 +1,26 @@
-import { useAuth, useUser } from "@clerk/expo";
-import { Redirect, router } from "expo-router";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useLanguageStore } from "@/store/useLanguageStore";
+import { useAuth } from "@clerk/expo";
+import { Redirect } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 
 export default function Index() {
-  const { isSignedIn, isLoaded, signOut } = useAuth();
-  const { user } = useUser();
+  const { isSignedIn, isLoaded } = useAuth();
+  const selectedLanguage = useLanguageStore((state) => state.selectedLanguage);
 
-  if (!isLoaded) {
+  const [hasHydrated, setHasHydrated] = useState(
+    () => useLanguageStore.persist.hasHydrated()
+  );
+
+  useEffect(() => {
+    if (hasHydrated) return;
+    const unsubscribe = useLanguageStore.persist.onFinishHydration(() => {
+      setHasHydrated(true);
+    });
+    return unsubscribe;
+  }, [hasHydrated]);
+
+  if (!isLoaded || !hasHydrated) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#6c4ef5" />
@@ -15,35 +28,9 @@ export default function Index() {
     );
   }
 
-  if (!isSignedIn) {
-    return <Redirect href="/onboarding" />;
-  }
+  if (!isSignedIn) return <Redirect href="/onboarding" />;
+  if (!selectedLanguage) return <Redirect href="/language-select" />;
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}>
-        <Text className="h1 color-ink text-center">Welcome!</Text>
-        <Text className="body-md color-muted mt-2 text-center">
-          {user?.primaryEmailAddress?.emailAddress}
-        </Text>
-        <Text className="body-sm color-muted mt-6 text-center">
-          Home screen coming soon.
-        </Text>
-        <TouchableOpacity
-          className="btn btn-primary mt-8"
-          onPress={() => router.push("/language-select")}
-          activeOpacity={0.85}
-        >
-          <Text className="body-lg font-poppins-semibold text-white">Choose a Language</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="btn btn-secondary mt-4"
-          onPress={() => signOut()}
-          activeOpacity={0.85}
-        >
-          <Text className="body-lg font-poppins-semibold" style={{ color: "#6c4ef5" }}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <Redirect href={"/(tabs)" as any} />;
 }
