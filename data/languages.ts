@@ -34,7 +34,7 @@ export const languages: Language[] = [
     nativeName: "Português",
     flag: "https://flagcdn.com/w320/pt.png",
     description: "Vibrant Brazilian Portuguese spoken across South America.",
-    totalUnits: 1,
+    totalUnits: 2,
     learnerCount: "8.2M learners",
   },
 ];
