@@ -31,6 +31,7 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [error, setError] = useState("");
+  const [socialLoading, setSocialLoading] = useState(false);
 
   const isLoading = fetchStatus === "fetching";
 
@@ -96,17 +97,26 @@ export default function SignUp() {
   async function handleSocialAuth(
     strategy: "oauth_google" | "oauth_apple" | "oauth_facebook"
   ) {
+    setError("");
+    setSocialLoading(true);
     try {
-      const result = await startSSOFlow({
+      const { createdSessionId, setActive } = await startSSOFlow({
         strategy,
         redirectUrl: Linking.createURL("/"),
       });
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId });
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
         router.replace("/");
       }
     } catch (err: any) {
-      console.error("Social auth error:", err);
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        "Social sign-in failed. Please try again.";
+      setError(msg);
+    } finally {
+      setSocialLoading(false);
     }
   }
 
@@ -217,16 +227,19 @@ export default function SignUp() {
             icon={<Ionicons name="logo-google" size={22} color="#EA4335" />}
             label="Continue with Google"
             onPress={() => handleSocialAuth("oauth_google")}
+            disabled={socialLoading}
           />
           <SocialButton
             icon={<Ionicons name="logo-facebook" size={22} color="#1877F2" />}
             label="Continue with Facebook"
             onPress={() => handleSocialAuth("oauth_facebook")}
+            disabled={socialLoading}
           />
           <SocialButton
             icon={<Ionicons name="logo-apple" size={22} color="#000000" />}
             label="Continue with Apple"
             onPress={() => handleSocialAuth("oauth_apple")}
+            disabled={socialLoading}
           />
 
           {/* Footer */}
@@ -260,16 +273,19 @@ function SocialButton({
   icon,
   label,
   onPress,
+  disabled,
 }: {
   icon: React.ReactNode;
   label: string;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   return (
     <TouchableOpacity
-      style={styles.socialBtn}
+      style={[styles.socialBtn, disabled && { opacity: 0.5 }]}
       activeOpacity={0.8}
       onPress={onPress}
+      disabled={disabled}
     >
       <View style={styles.socialIcon}>{icon}</View>
       <Text className="body-md font-poppins-medium color-ink flex-1 text-center">

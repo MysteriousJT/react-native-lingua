@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(node -e \"const t = require\\('./node_modules/@clerk/expo/dist/index.js'\\); console.log\\(Object.keys\\(t\\).filter\\(k=>k.includes\\('Sign'\\)||k.includes\\('sign'\\)\\)\\)\")",
-      "Bash(node_modules/.bin/tsc --version)"
+      "Bash(node_modules/.bin/tsc --version)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\jeffe\\\\OneDrive\\\\Desktop\\\\Duolingo-Clone\\\\assets\" -Recurse | Where-Object {!$_.PSIsContainer} | Select-Object -ExpandProperty FullName)"
     ]
   },
   "enabledPlugins": {
