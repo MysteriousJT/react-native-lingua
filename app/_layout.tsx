@@ -16,6 +16,10 @@ if (!publishableKey) {
   throw new Error("Add EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to your .env file");
 }
 
+if (!process.env.EXPO_PUBLIC_POSTHOG_KEY) {
+  throw new Error("Add EXPO_PUBLIC_POSTHOG_KEY to your .env file");
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     "Poppins-Regular": require("@/assets/assets/fonts/Poppins-Regular.ttf"),

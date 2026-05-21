@@ -1,17 +1,53 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { getLessonById } from "@/data/lessons";
 import { images } from "@/constants/images";
+import { useLanguageStore } from "@/store/useLanguageStore";
+import { useStreamCall, type AgentStatus, type CallStatus } from "@/hooks/useStreamCall";
+
+// ── Status indicator config ──────────────────────────────────────────────────
+
+const CALL_STATUS_CONFIG: Record<CallStatus, { dotColor: string; label: string }> = {
+  idle: { dotColor: "#b0b8c8", label: "Connecting..." },
+  connecting: { dotColor: "#ff8a00", label: "Connecting..." },
+  joined: { dotColor: "#21c16b", label: "Online" },
+  error: { dotColor: "#ff4757", label: "Disconnected" },
+  ended: { dotColor: "#b0b8c8", label: "Ended" },
+};
+
+const AGENT_STATUS_CONFIG: Record<AgentStatus, { dotColor: string; label: string }> = {
+  idle: { dotColor: "#b0b8c8", label: "AI Teacher joining..." },
+  connecting: { dotColor: "#ff8a00", label: "AI Teacher joining..." },
+  connected: { dotColor: "#21c16b", label: "Online" },
+  failed: { dotColor: "#ff4757", label: "AI unavailable" },
+};
 
 export default function AudioLessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lesson = getLessonById(id);
-  const [micActive, setMicActive] = useState(true);
+  const { selectedLanguage } = useLanguageStore();
   const [subtitlesActive, setSubtitlesActive] = useState(false);
+
+  const { status, agentStatus, isMuted, error, toggleMute, endCall, retryCall } =
+    useStreamCall({
+      lessonId: id ?? "",
+      language: selectedLanguage ?? "es",
+    });
+
+  const handleEndCall = async () => {
+    await endCall();
+    router.back();
+  };
 
   if (!lesson) {
     return (
@@ -27,22 +63,38 @@ export default function AudioLessonScreen() {
   }
 
   const firstPhrase = lesson.goals[0]?.phrases?.[0];
-  const bubbleText = firstPhrase?.text ?? lesson.aiTeacherPrompt.introMessage.split(".")[0] + ".";
+  const bubbleText =
+    firstPhrase?.text ??
+    lesson.aiTeacherPrompt.introMessage.split(".")[0] + ".";
   const bubbleTranslation = firstPhrase?.translation ?? "Let's begin!";
+
+  const micActive = !isMuted;
+  // When the call is joined, show agent status; otherwise show call status
+  const statusCfg =
+    status === "joined"
+      ? AGENT_STATUS_CONFIG[agentStatus]
+      : CALL_STATUS_CONFIG[status];
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.circleBtn} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.circleBtn}
+          onPress={() => router.back()}
+        >
           <Ionicons name="chevron-back" size={22} color="#001132" />
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>AI Teacher</Text>
           <View style={styles.onlineRow}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>Online</Text>
+            <View
+              style={[styles.onlineDot, { backgroundColor: statusCfg.dotColor }]}
+            />
+            <Text style={[styles.onlineText, { color: statusCfg.dotColor }]}>
+              {statusCfg.label}
+            </Text>
           </View>
         </View>
 
@@ -51,7 +103,7 @@ export default function AudioLessonScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Scene */}
+      {/* ── Scene ── */}
       <View style={styles.scene}>
         <Image
           source={images.mascotWelcome}
@@ -59,17 +111,46 @@ export default function AudioLessonScreen() {
           contentFit="contain"
         />
 
+        {/* Connecting overlay */}
+        {(status === "idle" || status === "connecting") && (
+          <View style={styles.overlay}>
+            <View style={styles.overlayCard}>
+              <ActivityIndicator size="large" color="#6c4ef5" />
+              <Text style={styles.overlayTitle}>Connecting to AI Teacher</Text>
+              <Text style={styles.overlaySubtitle}>
+                Setting up your audio session…
+              </Text>
+            </View>
+          </View>
+        )}
 
+        {/* Error overlay */}
+        {status === "error" && (
+          <View style={styles.overlay}>
+            <View style={styles.overlayCard}>
+              <Ionicons name="wifi-outline" size={36} color="#ff4757" />
+              <Text style={styles.overlayTitle}>Connection Failed</Text>
+              <Text style={styles.overlaySubtitle}>
+                {error ?? "Could not connect to your lesson."}
+              </Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={retryCall}>
+                <Text style={styles.retryBtnText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
-      {/* Speech bubble */}
+      {/* ── Speech bubble ── */}
       <View style={styles.bubble}>
         <Text style={styles.bubblePhraseText} numberOfLines={2}>
-          {bubbleText}
+          {status === "joined"
+            ? bubbleText
+            : lesson.aiTeacherPrompt.introMessage.split(".")[0] + "."}
         </Text>
         <View style={styles.bubbleBottomRow}>
           <Text style={styles.bubbleTranslationText} numberOfLines={1}>
-            {bubbleTranslation}
+            {status === "joined" ? bubbleTranslation : "Preparing your lesson…"}
           </Text>
           <TouchableOpacity style={styles.speakerBtn}>
             <Ionicons name="volume-high" size={16} color="#6c4ef5" />
@@ -77,11 +158,11 @@ export default function AudioLessonScreen() {
         </View>
       </View>
 
-      {/* Controls */}
+      {/* ── Controls ── */}
       <View style={styles.controlsCard}>
-        {/* Camera (off) */}
+        {/* Camera (always off for audio-only) */}
         <View style={styles.controlItem}>
-          <View style={[styles.controlBtn]}>
+          <View style={styles.controlBtn}>
             <Ionicons name="videocam-off" size={22} color="#6b7280" />
           </View>
           <Text style={styles.controlLabel}>Camera</Text>
@@ -91,17 +172,25 @@ export default function AudioLessonScreen() {
         <View style={styles.controlItem}>
           <TouchableOpacity
             style={[styles.controlBtn, micActive && styles.controlBtnActive]}
-            onPress={() => setMicActive(!micActive)}
+            onPress={toggleMute}
+            disabled={status !== "joined"}
           >
-            <Ionicons name="mic" size={22} color={micActive ? "#fff" : "#6b7280"} />
+            <Ionicons
+              name={micActive ? "mic" : "mic-off"}
+              size={22}
+              color={micActive ? "#fff" : "#6b7280"}
+            />
           </TouchableOpacity>
-          <Text style={styles.controlLabel}>Mic</Text>
+          <Text style={styles.controlLabel}>{isMuted ? "Muted" : "Mic"}</Text>
         </View>
 
         {/* Subtitles */}
         <View style={styles.controlItem}>
           <TouchableOpacity
-            style={[styles.controlBtn, subtitlesActive && styles.controlBtnActive]}
+            style={[
+              styles.controlBtn,
+              subtitlesActive && styles.controlBtnActive,
+            ]}
             onPress={() => setSubtitlesActive(!subtitlesActive)}
           >
             <Text
@@ -120,7 +209,7 @@ export default function AudioLessonScreen() {
         <View style={styles.controlItem}>
           <TouchableOpacity
             style={[styles.controlBtn, styles.controlBtnDanger]}
-            onPress={() => router.back()}
+            onPress={handleEndCall}
           >
             <Ionicons name="call" size={22} color="#fff" />
           </TouchableOpacity>
@@ -128,21 +217,27 @@ export default function AudioLessonScreen() {
         </View>
       </View>
 
-      {/* Feedback */}
+      {/* ── Feedback row ── */}
       <View style={styles.feedbackRow}>
         <View style={styles.feedbackItem}>
           <Text style={styles.feedbackLabel}>Speaking</Text>
-          <Text style={[styles.feedbackValue, { color: "#21c16b" }]}>Excellent</Text>
+          <Text style={[styles.feedbackValue, { color: "#21c16b" }]}>
+            {status === "joined" ? "Excellent" : "—"}
+          </Text>
         </View>
         <View style={styles.feedbackDivider} />
         <View style={styles.feedbackItem}>
           <Text style={styles.feedbackLabel}>Pronunciation</Text>
-          <Text style={[styles.feedbackValue, { color: "#4d88ff" }]}>Great</Text>
+          <Text style={[styles.feedbackValue, { color: "#4d88ff" }]}>
+            {status === "joined" ? "Great" : "—"}
+          </Text>
         </View>
         <View style={styles.feedbackDivider} />
         <View style={styles.feedbackItem}>
           <Text style={styles.feedbackLabel}>Grammar</Text>
-          <Text style={[styles.feedbackValue, { color: "#ff8a00" }]}>Good</Text>
+          <Text style={[styles.feedbackValue, { color: "#ff8a00" }]}>
+            {status === "joined" ? "Good" : "—"}
+          </Text>
         </View>
       </View>
     </SafeAreaView>
@@ -207,12 +302,10 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: "#21c16b",
   },
   onlineText: {
     fontFamily: "Poppins-Medium",
     fontSize: 12,
-    color: "#21c16b",
   },
   iconBtn: {
     width: 36,
@@ -237,6 +330,47 @@ const styles = StyleSheet.create({
     right: 0,
     height: "100%",
   },
+
+  // ── Overlays
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(250,250,250,0.88)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  overlayCard: {
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 24,
+  },
+  overlayTitle: {
+    fontFamily: "Poppins-SemiBold",
+    fontSize: 16,
+    color: "#001132",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  overlaySubtitle: {
+    fontFamily: "Poppins-Regular",
+    fontSize: 13,
+    color: "#6b7280",
+    textAlign: "center",
+  },
+  retryBtn: {
+    marginTop: 8,
+    backgroundColor: "#6c4ef5",
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  retryBtnText: {
+    fontFamily: "Poppins-SemiBold",
+    fontSize: 14,
+    color: "#fff",
+  },
+
+  // ── Speech bubble
   bubble: {
     marginHorizontal: 16,
     marginVertical: 10,
