@@ -94,7 +94,7 @@ export default function LearnScreen() {
     <SafeAreaView style={styles.safe} edges={["top"]}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.circleBtn} onPress={() => router.push("/")}>
+        <TouchableOpacity style={styles.circleBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color="#001132" />
         </TouchableOpacity>
 

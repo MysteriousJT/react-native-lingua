@@ -1116,7 +1116,7 @@ export const lessons: Lesson[] = [
           { word: "はじめまして", translation: "Nice to meet you (first meeting)", pronunciation: "ha-ji-me-ma-shi-te" },
           { word: "わたしは〜です", translation: "I am ~", pronunciation: "wa-ta-shi-wa ~ de-su" },
           { word: "よろしく おねがいします", translation: "Please treat me well / Nice to meet you", pronunciation: "yo-ro-shi-ku o-ne-ga-i-shi-mas" },
-          { word: "〜から きました", translation: "I came from ~", pronunciation: "~ ka-ra ki-ma-shi-ta" },
+          { word: "〜からきました", translation: "I came from ~", pronunciation: "~ ka-ra ki-ma-shi-ta" },
         ],
         phrases: [
           { text: "はじめまして。わたしはアナです。", translation: "Nice to meet you. I am Ana.", pronunciation: "ha-ji-me-ma-shi-te. wa-ta-shi-wa ANA de-su." },
